@@ -7,7 +7,24 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = bytearray([0] * 256)
+        self.reg = bytearray([0] * 7 + [0xF4])
+        # Internal registers:        
+        self.pc = 0  # PC: Program Counter, address of the currently executing instruction
+        self.ir = 0  # Instruction Register, contains a copy of the currently executing instruction
+        self.mar = 0  # Memory Address Register, holds the memory address we're reading or writing
+        self.mdr = 0  # Memory Data Register, holds the value to write or the value just read
+        self.fl = [0b00000000]  # Flag
+
+        self.ir = {0b00000001: self.HLT,
+                   0b10000010: self.LDI,
+                   0b01000111: self.PRN}
+
+    def ram_read(self, mar):
+        return self.ram[mar]  # Accepts the address to read and return the value stored there
+
+    def ram_write(self, mdr, mar):
+        self.ram[mar] = mdr  # Accepts a value to write, and the address to write it to
 
     def load(self):
         """Load a program into memory."""
@@ -23,8 +40,7 @@ class CPU:
             0b00001000,
             0b01000111, # PRN R0
             0b00000000,
-            0b00000001, # HLT
-        ]
+            0b00000001] # HLT
 
         for instruction in program:
             self.ram[address] = instruction
@@ -39,6 +55,7 @@ class CPU:
         #elif op == "SUB": etc
         else:
             raise Exception("Unsupported ALU operation")
+
 
     def trace(self):
         """
@@ -60,6 +77,32 @@ class CPU:
 
         print()
 
+
     def run(self):
         """Run the CPU."""
-        pass
+        while True:
+            index = self.ram[self.pc]
+
+            # Get dictionary entry then execute returned instruction
+            next_step = self.ir[index]
+            next_step()
+
+
+    def LDI(self):
+        # Set a specified register to a specified value
+        address = self.ram_read(self.pc + 1)
+        value = self.ram_read(self.pc + 2)
+        # Write the value to the registry at specified address
+        self.reg[address] = value
+        self.pc += 3
+
+
+    def PRN(self):
+        # Print numeric value stored in the given register
+        address = self.ram_read(self.pc + 1)
+        print(self.reg[address])
+        self.pc += 2
+
+
+    def HLT(self):
+        sys.exit(0)

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# python3 ls8/ls8.py -v
 
 """Main."""
 
