@@ -14,11 +14,12 @@ class CPU:
         self.ir = 0  # Instruction Register, contains a copy of the currently executing instruction
         self.mar = 0  # Memory Address Register, holds the memory address we're reading or writing
         self.mdr = 0  # Memory Data Register, holds the value to write or the value just read
-        self.fl = [0b00000000]  # Flag
+        # self.fl = [0b00000000]  # Flag
 
         self.ir = {0b00000001: self.HLT,
                    0b10000010: self.LDI,
-                   0b01000111: self.PRN}
+                   0b01000111: self.PRN,
+                   0b10100010: self.MUL}
 
     def ram_read(self, mar):
         return self.ram[mar]  # Accepts the address to read and return the value stored there
@@ -26,25 +27,51 @@ class CPU:
     def ram_write(self, mdr, mar):
         self.ram[mar] = mdr  # Accepts a value to write, and the address to write it to
 
-    def load(self):
+    def load(self, file):
         """Load a program into memory."""
 
-        address = 0
+        # address = 0
+        try:
+            with open(file) as f:
+                address = 0
+                for line in f:
+                    # Split the line if it has comments
+                    removed_comments = line.strip().split("#")
+                    # Take the 0th element and strip out spaces
+                    line_string_value = removed_comments[0].strip()
+                    # If line is blank, skip it
+                    if line_string_value == "":
+                        continue
+                    # Convert line to an int value, base 2
+                    num = int(line_string_value, 2)
 
-        # For now, we've just hardcoded a program:
+                    # Save it to memory
+                    self.ram[address] = num
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001] # HLT
+                    # Increment the address counter
+                    address += 1
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                # Close the file when done.
+                f.close()
+
+        except FileNotFoundError:
+            print("--- File Not Found ---")
+            sys.exit(2)
+
+        # # For now, we've just hardcoded a program:
+
+        # program = [
+        #     # From print8.ls8
+        #     0b10000010, # LDI R0,8
+        #     0b00000000,
+        #     0b00001000,
+        #     0b01000111, # PRN R0
+        #     0b00000000,
+        #     0b00000001] # HLT
+
+        # for instruction in program:
+        #     self.ram[address] = instruction
+        #     address += 1
 
 
     def alu(self, op, reg_a, reg_b):
@@ -52,7 +79,10 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -82,9 +112,7 @@ class CPU:
         """Run the CPU."""
         while True:
             index = self.ram[self.pc]
-
-            # Get dictionary entry then execute returned instruction
-            next_step = self.ir[index]
+            next_step = self.ir[index]  # Get dictionary entry then execute returned instruction
             next_step()
 
 
@@ -106,3 +134,15 @@ class CPU:
 
     def HLT(self):
         sys.exit(0)
+
+
+    def MUL(self):
+        # Get the values from Memory
+        reg_a = self.ram_read(self.pc + 1)
+        reg_b = self.ram_read(self.pc + 2)
+
+        # Hit up the ALU to multiply
+        self.alu("MUL", reg_a, reg_b)
+
+        # Advance the Program Counter
+        self.pc += 3
