@@ -19,7 +19,9 @@ class CPU:
         self.ir = {0b00000001: self.HLT,
                    0b10000010: self.LDI,
                    0b01000111: self.PRN,
-                   0b10100010: self.MUL}
+                   0b10100010: self.MUL,
+                   0b01000110: self.POP,
+                   0b01000101: self.PUSH}
 
     def ram_read(self, mar):
         return self.ram[mar]  # Accepts the address to read and return the value stored there
@@ -133,6 +135,7 @@ class CPU:
 
 
     def HLT(self):
+        # The Hault fumction
         sys.exit(0)
 
 
@@ -141,8 +144,28 @@ class CPU:
         reg_a = self.ram_read(self.pc + 1)
         reg_b = self.ram_read(self.pc + 2)
 
-        # Hit up the ALU to multiply
-        self.alu("MUL", reg_a, reg_b)
+        self.alu("MUL", reg_a, reg_b)   # Hit up the ALU to multiply
 
-        # Advance the Program Counter
-        self.pc += 3
+        self.pc += 3   # Advance the Program Counter
+
+
+    def POP(self):
+        # Get the value from Memory using the Stack Pointer
+        address = self.ram_read(self.pc + 1)
+        value = self.ram[self.reg[7]]
+
+        self.reg[address] = value    # Copy it to the given registry
+        self.reg[7] += 1             # Increment the Stack Pointer
+
+        self.pc += 2   # Advance the Program Counter
+
+
+    def PUSH(self):
+        # Get the value from Register
+        address = self.ram_read(self.pc + 1)
+        value = self.reg[address]
+
+        self.reg[7] -= 1               # Decrement the Stack Pointer
+        self.ram[self.reg[7]] = value  # Copy in the given registry value using the Stack Pointer
+
+        self.pc += 2   # Advance the Program Counter
